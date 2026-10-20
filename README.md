@@ -87,6 +87,42 @@ lab-lesson1-B：totalAmountCents=5000， paymentCount=1，version=1
 DTO没有抽成公共模块，两个服务只通过JSON契约耦合。
 代码里的中文注释说明了事务和恢复边界；[消息契约](docs/message-contracts.md)定义字段。
 
+## IDEA本地调试与Dashboard
+
+运行类为`com.example.flink.PaymentAggregationJob`，模块选择`flink-job`。
+重新加载Maven，并在IDEA运行配置中启用`Include dependencies with "Provided" scope`；
+Flink运行时和新增的`flink-runtime-web`都使用provided作用域。
+
+程序参数加入`--local-web-ui`即可开启本地Dashboard，地址为
+http://127.0.0.1:18082。它与Docker集群的18081页面相互独立，随本地Java进程结束而关闭。
+不传此参数时继续使用原来的集群执行方式；部署脚本不需要调整。
+启用该开关时，默认Kafka地址自动切换为`localhost:19092`；集群模式仍为`kafka:9092`。
+显式指定的`--bootstrap-servers`优先于默认值。
+
+本机连接实验Kafka及保存Checkpoint时，参数示例为：
+
+```text
+--local-web-ui
+--bootstrap-servers localhost:19092
+--checkpoint-dir file:///E:/IdeaProjects/study/flink/.lab/local-checkpoints
+--transactional-id-prefix payment-local-debug-
+```
+
+这组参数仍然读写现有两个Topic，不会自动隔离数据，也不会加载Docker作业的快照。
+只有在独立、空白的学习数据环境中才能直接从头运行；已有实验数据请先规划状态恢复，
+不要同时启动Docker和IDEA两份支付聚合作业。单独改事务前缀不能解决业务数据隔离。
+
+本地调试建议使用JDK17，与Flink容器一致。若遇到Java模块反射访问异常，
+在IDEA的VM options加入项目测试使用的参数：
+
+```text
+--add-opens=java.base/java.util=ALL-UNNAMED
+--add-opens=java.base/java.lang=ALL-UNNAMED
+```
+
+需要逐行学习累计逻辑时，可直接Debug`PaymentAggregateFunctionTest`，无需连接Kafka。
+断点若暂停整个JVM，本地Dashboard也可能暂时不响应；长时间暂停会影响Checkpoint和事务超时。
+
 ## 手工提交与查询
 
 ```powershell

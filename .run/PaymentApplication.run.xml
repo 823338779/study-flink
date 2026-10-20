@@ -1,6 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="PaymentApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
     <module name="payment-service" />
+    <option name="PROGRAM_PARAMETERS" value="--local-web-ui --bootstrap-servers localhost:19092 --checkpoint-dir file:///$PROJECT_DIR$/.lab/local-checkpoints --transactional-id-prefix payment-local-debug-" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.payment.PaymentApplication" />
     <extension name="net.ashald.envfile">
       <option name="IS_ENABLED" value="false" />

@@ -12,6 +12,8 @@ import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
 import org.apache.flink.connector.kafka.sink.KafkaSink;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -24,7 +26,7 @@ import java.nio.charset.StandardCharsets;
 public final class PaymentAggregationJob {
     public static void main(String[] args) throws Exception {
         var options = JobOptions.parse(args);
-        var env = StreamExecutionEnvironment.getExecutionEnvironment();
+        var env = createEnvironment(options);
         env.setParallelism(2);
         env.enableCheckpointing(options.checkpointIntervalMs(), CheckpointingMode.EXACTLY_ONCE);
         env.getCheckpointConfig().setCheckpointTimeout(60000);
@@ -54,5 +56,17 @@ public final class PaymentAggregationJob {
                 .process(new PaymentAggregateFunction()).name("shop-aggregate").uid("shop-aggregate")
                 .sinkTo(sink).name("totals-sink").uid("totals-sink");
         env.execute("payment-aggregation");
+    }
+
+    /** 本地调试显式开启独立Dashboard；集群提交沿用客户端提供的执行环境。 */
+    static StreamExecutionEnvironment createEnvironment(JobOptions options) {
+        if (!options.localWebUi()) {
+            return StreamExecutionEnvironment.getExecutionEnvironment();
+        }
+        var config = new Configuration();
+        config.set(RestOptions.PORT, 18082);
+        config.set(RestOptions.ADDRESS, "127.0.0.1");
+        config.set(RestOptions.BIND_ADDRESS, "127.0.0.1");
+        return StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(config);
     }
 }

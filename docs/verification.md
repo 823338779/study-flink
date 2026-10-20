@@ -1,5 +1,21 @@
 # 实际验证记录
 
+## 2026-10-21：本地Dashboard
+
+新增`--local-web-ui`开关，显式启用本地18082端口；默认集群执行方式不变。
+执行`mvn -B -pl flink-job -am package`成功，7项Flink测试全部通过。
+使用与主程序相同的环境创建方法启动临时数字流作业，验证`/overview`、
+`/jobs/overview`和`/index.html`均返回HTTP200，作业列表包含临时作业、页面包含HTML。
+该验证未连接Kafka或数据库；完成后取消临时作业并关闭本地环境。
+日志保存在`.lab/local-web-ui-build.log`和`.lab/local-web-ui-smoke.log`。
+
+随后修正本地模式的Kafka默认地址：`--local-web-ui`使用`localhost:19092`，
+集群模式保持`kafka:9092`，显式参数仍然优先。回归测试先复现错误默认值，再修复；
+模块打包成功，8项测试通过。只读Admin客户端已使用新默认值成功读取两个Topic的元数据，
+没有启动或重放支付作业。日志见`.lab/local-kafka-address-green.log`和`.lab/local-kafka-metadata.log`。
+
+## 2026-10-20：完整学习链路
+
 执行日期：2026-10-20，Windows、PowerShell、本机JDK21、Docker Desktop Linux容器。
 这是本机教学验证，不是生产可用性、容量或长时间断电保证。
 
