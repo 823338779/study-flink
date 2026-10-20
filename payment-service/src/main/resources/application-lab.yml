@@ -1,0 +1,4 @@
+# 仅启用本地教学控制端点；默认profile不暴露。
+spring:
+  application:
+    name: payment-learning-lab

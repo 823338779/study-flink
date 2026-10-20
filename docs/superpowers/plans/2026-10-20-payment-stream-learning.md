@@ -6,6 +6,16 @@
 
 **Architecture:** 一个 Maven 父工程包含 payment-service 与 flink-job 两个子模块。Docker Compose 承载基础设施和独立 Flink 集群，Spring Boot 在本机运行；JSON 事件连接各组件，PostgreSQL 保存可查询的累计结果。
 
+**执行说明：** 用户选择当前会话顺序实现。下方保留原始步骤设计；最终执行结果见 `docs/verification.md`，逐项调整与验证证据见 `.superpowers/sdd/2026-10-20-payment-stream-learning/progress.md`。集成测试合并到 `PaymentFlowIT`；PostgreSQL实际使用同系列17.10固定摘要；故障注入新增只读观察接口用于脚本验收。
+
+**交付验收（2026-10-20）：**
+
+- [x] Task 1–2：工程、JSON契约与Docker基础设施。
+- [x] Task 3–4：Flink有状态聚合与Spring支付接口。
+- [x] Task 5–6：PostgreSQL事务、消费去重和故障注入。
+- [x] Task 7：六章实际实验、重复启动保护及带状态恢复。
+- [x] Task 8：教程、独立审查修正、最终18项测试全部通过。
+
 **Tech Stack:** Java 17 字节码、本机 Java 21、Spring Boot 3.5.7、Flink 1.20.3、Flink Kafka Connector 3.4.0-1.20、Kafka 3.9.1、PostgreSQL 17.6、JUnit 5、Testcontainers 2.0.2、PowerShell。
 
 **Spec:** `docs/superpowers/specs/2026-10-20-payment-stream-learning-design.md`，已获用户确认。
@@ -81,13 +91,13 @@ ID 正则 `[A-Za-z0-9_-]{1,64}`；resultId 为 `shopId + ":" + version`。
 - Fixtures: A 的 payment-001 金额 10000、occurredAt 为 `2026-10-20T10:00:00Z`；
   A 的结果 ID 为 `A:1`、金额10000、paymentCount=version=1、triggerEventId=payment-001。
 
-- [ ] **Step 1:** 创建最少的 POM 与契约测试，测试读取同一根目录 fixtures 并断言每个字段；DTO 尚不存在时先记录编译失败。
-- [ ] **Step 2:** 执行 `mvn -B test`，确认失败原因是待实现类型，不是下载失败。
-- [ ] **Step 3:** 实现 DTO 和 JSON 编解码；测试非法时间、缺失金额和未知消息结构被拒绝。
-- [ ] **Step 4:** 配置父 POM release=17、UTF-8、JUnit5/Surefire；Spring 模块导入 Boot BOM，
+- **Step 1:** 创建最少的 POM 与契约测试，测试读取同一根目录 fixtures 并断言每个字段；DTO 尚不存在时先记录编译失败。
+- **Step 2:** 执行 `mvn -B test`，确认失败原因是待实现类型，不是下载失败。
+- **Step 3:** 实现 DTO 和 JSON 编解码；测试非法时间、缺失金额和未知消息结构被拒绝。
+- **Step 4:** 配置父 POM release=17、UTF-8、JUnit5/Surefire；Spring 模块导入 Boot BOM，
   Flink 模块独立管理 Jackson/Flink 依赖，避免 Boot BOM 覆盖 Flink 自带运行时。
   Flink framework 依赖 provided；Kafka connector 打入 shaded jar，排除签名文件并保留服务描述。
-- [ ] **Step 5:** 执行 `mvn -B test`、`mvn -B dependency:tree`。
+- **Step 5:** 执行 `mvn -B test`、`mvn -B dependency:tree`。
   通过条件：契约测试通过，Flink 部署包不包含 Flink 核心框架或 Spring Boot，两个模块不相互依赖。
 
 仅选择稳定发布依赖。若网络或镜像可用性需要替换补丁版本，保持已确认的系列并记录实际版本和兼容性证据，
@@ -109,16 +119,16 @@ ID 正则 `[A-Za-z0-9_-]{1,64}`；resultId 为 `shopId + ":" + version`。
 - Named volumes：Kafka 数据、PG 数据、Flink Checkpoint（JM/TM 统一挂载 `/opt/flink/checkpoints`）。
 - `Invoke-LabCommand` 检查 native 退出码，`Wait-LabCondition` 有超时和最后一次失败信息。
 
-- [ ] **Step 1:** 检查三个精确镜像 tag 和已占用端口；不停止任何非本项目容器。
-- [ ] **Step 2:** 编写 Compose，Kafka 单节点 KRaft、事务状态日志副本数/minISR=1、
+- **Step 1:** 检查三个精确镜像 tag 和已占用端口；不停止任何非本项目容器。
+- **Step 2:** 编写 Compose，Kafka 单节点 KRaft、事务状态日志副本数/minISR=1、
   broker 事务超时上限至少600000ms，设置内外 listener；JM/TM设置2个slot和可写持久化卷。
-- [ ] **Step 3:** `docker compose -p flink-payment-lab config --quiet` 必须成功；
+- **Step 3:** `docker compose -p flink-payment-lab config --quiet` 必须成功；
   初始化脚本用 LF，幂等创建 `payment-events` 与 `shop-payment-totals`，分区数2、副本数1。
-- [ ] **Step 4:** 实现 `start-infra.ps1`：检查依赖、启动、轮询健康、检查 Topic 分区数与注册slot数；
+- **Step 4:** 实现 `start-infra.ps1`：检查依赖、启动、轮询健康、检查 Topic 分区数与注册slot数；
   缺失镜像或端口冲突返回非零且保留原始错误。
-- [ ] **Step 5:** 实现 `stop-infra.ps1`：只停止本项目，不带 `--volumes`；
+- **Step 5:** 实现 `stop-infra.ps1`：只停止本项目，不带 `--volumes`；
   连续两次启动不会重复创建资源或改分区数。
-- [ ] **Step 6:** 实际运行启动脚本，验证 Kafka Topic 描述、`pg_isready`、
+- **Step 6:** 实际运行启动脚本，验证 Kafka Topic 描述、`pg_isready`、
   `GET http://127.0.0.1:18081/overview`；停止再启动后持久化卷仍在。
 
 Task 7 负责作业级的重复启动及恢复检查，此任务不自动提交 Flink 作业。
@@ -138,20 +148,20 @@ Task 7 负责作业级的重复启动及恢复检查，此任务不自动提交 
   `--checkpoint-dir`（默认file:///opt/flink/checkpoints）、`--transactional-id-prefix`（默认payment-lab-totals-）。
 - 作业名 `payment-aggregation`；source/aggregate/sink UID 分别 `payment-source`、`shop-aggregate`、`totals-sink`。
 
-- [ ] **Step 1:** 写 KeyedOneInputStreamOperatorTestHarness 测试：
+- **Step 1:** 写 KeyedOneInputStreamOperatorTestHarness 测试：
   A10000、B5000、A8000得到A18000/version2和B5000/version1；
   同事件重发无输出；A相同eventId变金额或时间抛明确异常；B相同eventId视为独立事件。
-- [ ] **Step 2:** 先运行 `mvn -B -pl flink-job -am test` 记录缺失实现失败。
-- [ ] **Step 3:** 实现 `MapState<String, PaymentEventDTO>` 去重和 `ValueState<ShopAggregateState>` 累计，
+- **Step 2:** 先运行 `mvn -B -pl flink-job -am test` 记录缺失实现失败。
+- **Step 3:** 实现 `MapState<String, PaymentEventDTO>` 去重和 `ValueState<ShopAggregateState>` 累计，
   先校验和 `Math.addExact` 计算成功再写状态；不设置TTL；生成确定性resultId。
-- [ ] **Step 4:** 增加恢复测试：保存A18000时的快照，再处理20和30元；重新创建算子并载入快照，
+- **Step 4:** 增加恢复测试：保存A18000时的快照，再处理20和30元；重新创建算子并载入快照，
   重放后输出版本和值与第一次一致，A最终23000；快照前重复事件在恢复后仍被过滤。
   增加溢出测试，拒绝溢出且不污染当前状态。
-- [ ] **Step 5:** 实现 KafkaSource（earliest初始位置）、JSON转换、keyBy、KafkaSink。
+- **Step 5:** 实现 KafkaSource（earliest初始位置）、JSON转换、keyBy、KafkaSink。
   显式设置EXACTLY_ONCE、事务超时600000、parallelism2、checkpoint timeout60000/max concurrent1、
   retained checkpoints及固定延时重启策略（10次、间隔3秒）。
   Sink key使用shopId；Checkpoint目录与UID稳定。
-- [ ] **Step 6:** 执行单元测试和 `mvn -B -pl flink-job -am package`；
+- **Step 6:** 执行单元测试和 `mvn -B -pl flink-job -am package`；
   检查生成的 `flink-job/target/flink-job.jar`，记录后续提交入口类。
 
 如宿主Java21对测试harness有模块访问限制，只给测试JVM添加所需open参数；
@@ -171,13 +181,13 @@ Task 7 负责作业级的重复启动及恢复检查，此任务不自动提交 
   表示Kafka确认接收，不表示Flink或数据库已完成。
 - 默认HTTP `127.0.0.1:18080`；Kafka `127.0.0.1:19092`。
 
-- [ ] **Step 1:** 编写MVC参数测试：空ID、ID含冒号、过长ID、null/零/负金额、非法occurredAt返回400且未调用Producer。
-- [ ] **Step 2:** 编写Publisher测试：future未确认时不返回成功；成功绑定shopId key；
+- **Step 1:** 编写MVC参数测试：空ID、ID含冒号、过长ID、null/零/负金额、非法occurredAt返回400且未调用Producer。
+- **Step 2:** 编写Publisher测试：future未确认时不返回成功；成功绑定shopId key；
   发送失败返回503；超时返回504并说明“结果不确定，使用同一事件重试”。
-- [ ] **Step 3:** 运行 `mvn -B -pl payment-service -am test` 确认失败，再实现Controller、Publisher及异常响应。
+- **Step 3:** 运行 `mvn -B -pl payment-service -am test` 确认失败，再实现Controller、Publisher及异常响应。
   Kafka Producer显式设置acks=all、enable.idempotence=true，
   使用String JSON序列化避免Java类型头耦合；等待发送确认最多10秒。
-- [ ] **Step 4:** 重新运行本任务测试。确认Controller没有写数据库，eventId没有被替换为随机ID。
+- **Step 4:** 重新运行本任务测试。确认Controller没有写数据库，eventId没有被替换为随机ID。
 
 ## Task 5: PostgreSQL 事务去重与版本更新
 
@@ -196,17 +206,17 @@ Task 7 负责作业级的重复启动及恢复检查，此任务不自动提交 
 - `GET /api/processed-events/count`返回`{"count": n}`。
 - handler_name 固定 `shop-total-projection-v1`；事件表unique(handler_name,event_id)。
 
-- [ ] **Step 1:** 用Testcontainers PostgreSQL17.6写集成测试；容器不可用时失败，不静默skip。
+- **Step 1:** 用Testcontainers PostgreSQL17.6写集成测试；容器不可用时失败，不静默skip。
   `mvn verify`通过Failsafe运行`*IT`，普通`mvn test`不要求Docker。
-- [ ] **Step 2:** 测试首次A:1写10000、重复A:1只登记一次、首次到达的A:3覆盖为23000、
+- **Step 2:** 测试首次A:1写10000、重复A:1只登记一次、首次到达的A:3覆盖为23000、
   随后首次到达A:2登记成功但金额和版本仍为23000/3。
-- [ ] **Step 3:** 运行 `mvn -B -pl payment-service -am verify` 记录待实现失败。
-- [ ] **Step 4:** 实现Flyway迁移、JdbcTemplate仓储与独立代理事务服务。
+- **Step 3:** 运行 `mvn -B -pl payment-service -am verify` 记录待实现失败。
+- **Step 4:** 实现Flyway迁移、JdbcTemplate仓储与独立代理事务服务。
   insertProcessed显式指定冲突键，只有插入成功才执行条件Upsert；
   PostgreSQL WHERE incoming.version > current.version 必须在同一条Upsert语句内。
-- [ ] **Step 5:** 增加真实回滚测试：外层TransactionTemplate调用process后主动抛异常，
+- **Step 5:** 增加真实回滚测试：外层TransactionTemplate调用process后主动抛异常，
   验证登记与统计均不存在。增加两个并发事务处理同一resultId的测试，断言只有一个APPLIED。
-- [ ] **Step 6:** 检查resultId与shopId/version一致、paymentCount=version及必填字段；
+- **Step 6:** 检查resultId与shopId/version一致、paymentCount=version及必填字段；
   测试无效结果不会留下已处理标记。运行verify全部通过。
 
 Testcontainers使用2.0.2 BOM及对应模块名；若启动失败先诊断Docker API/网络，
@@ -227,20 +237,20 @@ Testcontainers使用2.0.2 BOM及对应模块名；若启动失败先诊断Docker
 - `POST /api/lab/results` body ShopTotalDTO，发送到shop-payment-totals，要求shopId以`lab-`开头。
 - lab入口与故障bean仅在lab profile存在；Listener通过可选注入访问，不要求默认profile有故障bean。
 
-- [ ] **Step 1:** Listener测试验证调用顺序：解析校验 → 事务服务返回 → 故障注入；
+- **Step 1:** Listener测试验证调用顺序：解析校验 → 事务服务返回 → 故障注入；
   任一步失败都抛出异常，不正常返回；Kafka key与载荷shopId不一致时拒绝。
-- [ ] **Step 2:** 启用StringDeserializer、enable.auto.commit=false、isolation.level=read_committed、
+- **Step 2:** 启用StringDeserializer、enable.auto.commit=false、isolation.level=read_committed、
   AckMode.RECORD、concurrency=2、固定consumer group `payment-lab-projector`。
   使用DefaultErrorHandler配置无限可重试异常、固定1秒backoff；
   明确覆盖默认不可重试分类，避免反序列化/校验错误被默认recoverer跳过。
-- [ ] **Step 3:** 实现同步Listener与lab故障：transaction service返回即代表事务提交完成，
+- **Step 3:** 实现同步Listener与lab故障：transaction service返回即代表事务提交完成，
   原子消耗一次性armed ID后抛出专用实验异常。日志包含resultId、outcome和重投信息。
-- [ ] **Step 4:** 写真实Kafka3.9.1与PostgreSQL17.6容器测试：
+- **Step 4:** 写真实Kafka3.9.1与PostgreSQL17.6容器测试：
   arm A:1，发送结果；等待数据库出现A:1、观察Listener至少两次尝试，
   最终offset推进且processed_event仅1行。用有限轮询，不以固定sleep断言完成。
-- [ ] **Step 5:** 增加错误记录测试：非法结果后紧跟同分区正常记录，确认非法记录未被确认，
+- **Step 5:** 增加错误记录测试：非法结果后紧跟同分区正常记录，确认非法记录未被确认，
   正常记录未越过它；测试环境有界停止容器并保留日志。
-- [ ] **Step 6:** 验证非lab profile下两个lab端点404；执行 `mvn -B -pl payment-service -am verify`。
+- **Step 6:** 验证非lab profile下两个lab端点404；执行 `mvn -B -pl payment-service -am verify`。
 
 这一步不通过强杀Spring进程实现注入；文档如实称为提交间隙异常实验。
 
@@ -258,24 +268,24 @@ Testcontainers使用2.0.2 BOM及对应模块名；若启动失败先诊断Docker
 - `run-lab.ps1 -Chapter <1..6> -RunId <短ID>`使用带前缀独立店铺；默认RunId可生成一次并打印保存。
 - `verify-lab.ps1`自动执行正常链路、重复支付、消费重投及旧版本实验。
 
-- [ ] **Step 1:** submit脚本先校验本项目REST作业列表。
+- **Step 1:** submit脚本先校验本项目REST作业列表。
   没有运行作业但payment-events已有数据时，必须提供RestorePath，
   不允许对旧数据直接提交earliest且空状态的新作业。
   参数变化而已有作业运行时报告需要恢复重提，不伪称配置已变更。
-- [ ] **Step 2:** 通过 `docker compose cp`复制jar后用容器flink CLI提交；
+- **Step 2:** 通过 `docker compose cp`复制jar后用容器flink CLI提交；
   轮询作业RUNNING、Checkpoint成功和消费者就绪。失败时输出该项目日志，不清空数据。
-- [ ] **Step 3:** Chapter1发送A10000/B5000/A8000并轮询统计；
+- **Step 3:** Chapter1发送A10000/B5000/A8000并轮询统计；
   Chapter2原样重发第一条，确认版本仍为2。
   使用同一RunId连续执行两章，fixtures和返回offset写入本次实验记录。
-- [ ] **Step 4:** Chapter3提供“stop with savepoint → 从该路径以30000ms间隔恢复”的明确操作；
+- **Step 4:** Chapter3提供“stop with savepoint → 从该路径以30000ms间隔恢复”的明确操作；
   保存路径通过Flink返回值确认，轮询新Checkpoint。观察应用计算与read_committed消费时间，
   不断言恰好30秒，结束后同样恢复到10000ms。
-- [ ] **Step 5:** Chapter4先记录已完成Checkpoint ID及路径，再发送有限的唯一事件序列，
+- **Step 5:** Chapter4先记录已完成Checkpoint ID及路径，再发送有限的唯一事件序列，
   从发送循环中在确定位置执行本项目TaskManager restart，继续发完。
   轮询作业恢复、成功Checkpoint、最终唯一事件总和与计数；记录恢复信息。
-- [ ] **Step 6:** Chapter5使用独立店铺下一resultId布置提交后故障，再发支付，核对去重表与offset；
+- **Step 6:** Chapter5使用独立店铺下一resultId布置提交后故障，再发支付，核对去重表与offset；
   Chapter6在独立lab店铺注入version3和未出现过的version2，核对防旧版本覆盖。
-- [ ] **Step 7:** 实际执行 `mvn -B verify`、`scripts/verify-lab.ps1` 和Chapter4，
+- **Step 7:** 实际执行 `mvn -B verify`、`scripts/verify-lab.ps1` 和Chapter4，
   确认所有验收值。复跑相同RunId不能意外重复累计，启动脚本第二次执行不能增加Flink作业。
 
 PowerShell操作只针对Compose project及本次运行记录的服务，不扫描或杀掉其他Java进程。
@@ -288,17 +298,17 @@ PowerShell操作只针对Compose project及本次运行记录的服务，不扫�
 - Create: `README.md`, `docs/message-contracts.md`, `docs/labs.md`, `docs/verification.md`
 - Modify: `.env.example`、各步骤新增文件中的必要说明
 
-- [ ] **Step 1:** README写从零启动顺序：构建/测试 → 基础设施 → 本机Spring → 提交Flink → Chapter1。
+- **Step 1:** README写从零启动顺序：构建/测试 → 基础设施 → 本机Spring → 提交Flink → Chapter1。
   列出IDEA运行类、lab profile、端口、数据目录、Flink Web UI、停止及带状态恢复方式。
-- [ ] **Step 2:** labs按已确认六章组织，每章写业务问题、精确代码路径、PowerShell命令、
+- **Step 2:** labs按已确认六章组织，每章写业务问题、精确代码路径、PowerShell命令、
   输入、可观察日志/REST/SQL、预期值与原理；解释金额分单位及所有查询返回字段。
-- [ ] **Step 3:** contracts写JSON示例、ID稳定性、载荷冲突、店铺内顺序、
+- **Step 3:** contracts写JSON示例、ID稳定性、载荷冲突、店铺内顺序、
   resultId/version只在持续状态历史内有效，以及三个去重/版本职责。
-- [ ] **Step 4:** 记录真实执行命令、通过数、实验结果、使用版本及环境限制。
+- **Step 4:** 记录真实执行命令、通过数、实验结果、使用版本及环境限制。
   只报告执行过的验证；不把单broker副本数1称为生产高可用，不把故障注入称为真实kill。
-- [ ] **Step 5:** 核对spec全部验收项，审查事务边界、错误分类、旧值条件、并行顺序、
+- **Step 5:** 核对spec全部验收项，审查事务边界、错误分类、旧值条件、并行顺序、
   sink事务配置与持久化Checkpoint权限；发现问题先补复现测试再修正。
-- [ ] **Step 6:** 最后仅对变更影响的检查重跑；交付可点击README和主要入口文件，
+- **Step 6:** 最后仅对变更影响的检查重跑；交付可点击README和主要入口文件，
   简述已通过测试、已运行实验、尚存限制，并从第一章开始带用户操作。
 
 ## 自审与执行交接

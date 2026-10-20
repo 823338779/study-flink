@@ -1,0 +1,38 @@
+server:
+  address: 127.0.0.1
+  port: 18080
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:15432/payment_lab}
+    username: ${POSTGRES_USER:lab}
+    password: ${POSTGRES_PASSWORD:lab-password}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        enable.idempotence: true
+        max.block.ms: 5000
+        delivery.timeout.ms: 30000
+        request.timeout.ms: 10000
+    consumer:
+      group-id: payment-lab-projector
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        isolation.level: read_committed
+    listener:
+      ack-mode: record
+      concurrency: 2
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+      accept-float-as-int: false
+logging:
+  level:
+    org.apache.kafka: WARN
+    org.springframework.kafka.listener.DefaultErrorHandler: WARN

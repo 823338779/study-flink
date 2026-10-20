@@ -18,5 +18,6 @@ class MessageContractTest {
                 "shop-total.json"))), mapper.readTree(EventJson.writeTotal(total)));
         assertThrows(Exception.class, () -> EventJson.readPayment("{\"shopId\":\"A\"}"));
         assertThrows(Exception.class, () -> EventJson.readPayment(json.replace("2026-10-20T10:00:00Z", "bad")));
+        assertThrows(Exception.class, () -> EventJson.readPayment(json.replace("10000", "10000.5")));
     }
 }
