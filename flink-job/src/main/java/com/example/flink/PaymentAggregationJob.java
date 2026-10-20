@@ -15,9 +15,12 @@ import org.apache.flink.connector.kafka.sink.KafkaSink;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+
 import java.nio.charset.StandardCharsets;
 
-/** 第一课无窗口累计，后续可在此基础上引入事件时间和窗口。 */
+/**
+ * 第一课无窗口累计，后续可在此基础上引入事件时间和窗口。
+ */
 public final class PaymentAggregationJob {
     public static void main(String[] args) throws Exception {
         var options = JobOptions.parse(args);
