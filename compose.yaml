@@ -1,0 +1,16 @@
+services:
+  hiveserver2:
+    image: apache/hive:4.2.1
+    environment:
+      SERVICE_NAME: hiveserver2
+      SERVICE_OPTS: >-
+        -Djavax.jdo.option.ConnectionURL=jdbc:derby:;databaseName=/opt/hive/data/warehouse/metastore_db;create=true
+        -Dhive.metastore.warehouse.dir=/opt/hive/data/warehouse/tables
+    ports:
+      - "127.0.0.1:10000:10000"
+      - "127.0.0.1:10002:10002"
+    volumes:
+      - hive_data:/opt/hive/data/warehouse
+
+volumes:
+  hive_data:
