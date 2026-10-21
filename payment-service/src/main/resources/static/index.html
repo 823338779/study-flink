@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>支付事件实验台</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/events.css">
+  <script src="/events.js" defer></script>
+</head>
+<body>
+  <main>
+    <header><span class="brand">Flink 学习实验室</span><span class="tag">上游事件发送</span></header>
+    <h1>从一笔支付开始。</h1>
+    <p class="intro">发送一条真实的 Kafka 事件，观察 Flink 如何更新商店的累计金额。</p>
+    <nav aria-label="事件处理路径" class="pipeline">
+      <strong>支付事件</strong><span aria-hidden="true">→</span><span>Kafka 输入</span><span aria-hidden="true">→</span><span>Flink 聚合</span><span aria-hidden="true">→</span><span>Kafka 输出</span><span aria-hidden="true">→</span><span>PostgreSQL</span>
+    </nav>
+    <div class="workspace">
+      <section class="editor" aria-labelledby="form-title">
+        <h2 id="form-title">构造支付事件</h2>
+        <p class="hint">每笔新支付使用独立的事件 ID。</p>
+        <form id="payment-form">
+          <fieldset id="fields">
+            <label for="shop">商店 ID</label>
+            <input id="shop" name="shop" value="shop-demo" required maxlength="64" pattern="[A-Za-z0-9_\-]{1,64}" aria-describedby="shop-help" autocomplete="off">
+            <p id="shop-help" class="hint">支持字母、数字、下划线和短横线。同一商店的金额会累加。</p>
+            <label for="amount">支付金额 <span class="unit">元</span></label>
+            <input id="amount" name="amount" value="100.00" required inputmode="decimal" pattern="[0-9]+(\.[0-9]{1,2})?" aria-describedby="amount-help" autocomplete="off">
+            <p id="amount-help" class="hint">大于 0，最多两位小数；发送时精确转换为整数分。</p>
+          </fieldset>
+          <div class="actions">
+            <button id="send" type="submit">发送支付事件</button>
+            <button id="retry" class="secondary" type="button" disabled>重发同一事件</button>
+            <button id="next" class="text-button" type="button" disabled>准备下一笔</button>
+          </div>
+        </form>
+        <p class="hint retry-help">重发会保留原始 ID、金额和时间，用来观察 Flink 的事件去重。修改金额前，请先点“准备下一笔”。超时后请留在本页重试，刷新页面会生成新事件。</p>
+      </section>
+      <section class="preview" aria-labelledby="preview-title">
+        <div class="section-head"><h2 id="preview-title">将发送的事件</h2><span class="tag">JSON</span></div>
+        <dl class="metadata"><div><dt>Topic</dt><dd>payment-events</dd></div><div><dt>Key</dt><dd id="message-key">shop-demo</dd></div></dl>
+        <pre id="payload" tabindex="0" aria-label="事件 JSON 预览"></pre>
+        <p class="hint">eventId 标识一笔支付，shopId 用于分组，amountCents 的单位是分。</p>
+      </section>
+    </div>
+    <section class="result" aria-labelledby="result-title">
+      <div class="section-head"><h2 id="result-title">发送回执</h2><span id="result-state" class="tag">尚未发送</span></div>
+      <p id="feedback" role="status" aria-live="polite">点击“发送支付事件”，这里会显示 Kafka 确认接收的位置。</p>
+      <pre id="receipt" tabindex="0" aria-label="服务返回的发送回执" hidden></pre>
+      <p class="hint">收到 ACCEPTED 仅表示 Kafka 已接收。Flink 计算、checkpoint 提交与数据库更新会在后续发生。</p>
+    </section>
+    <footer>由 payment-service 提供 · POST /api/payments</footer>
+  </main>
+</body>
+</html>

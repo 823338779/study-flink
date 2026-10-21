@@ -50,15 +50,22 @@ public final class PaymentAggregationJob {
                         .setKeySerializationSchema(e -> e.shopId.getBytes(StandardCharsets.UTF_8))
                         .setValueSerializationSchema(e -> EventJson.writeTotal(e).getBytes(StandardCharsets.UTF_8))
                         .build()).build();
-        env.fromSource(source, WatermarkStrategy.noWatermarks(), "payment-events").uid("payment-source")
-                .map(EventJson::readPayment).name("parse-payment").uid("parse-payment")
+        env.fromSource(source, WatermarkStrategy.noWatermarks(), "payment-events")
+                .uid("payment-source")
+                .map(EventJson::readPayment)
+                .name("parse-payment")
+                .uid("parse-payment")
                 .keyBy(e -> e.shopId)
-                .process(new PaymentAggregateFunction()).name("shop-aggregate").uid("shop-aggregate")
+                .process(new PaymentAggregateFunction())
+                .name("shop-aggregate")
+                .uid("shop-aggregate")
                 .sinkTo(sink).name("totals-sink").uid("totals-sink");
         env.execute("payment-aggregation");
     }
 
-    /** 本地调试显式开启独立Dashboard；集群提交沿用客户端提供的执行环境。 */
+    /**
+     * 本地调试显式开启独立Dashboard；集群提交沿用客户端提供的执行环境。
+     */
     static StreamExecutionEnvironment createEnvironment(JobOptions options) {
         if (!options.localWebUi()) {
             return StreamExecutionEnvironment.getExecutionEnvironment();

@@ -1,0 +1,53 @@
+- main [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]: Flink 学习实验室
+    - generic [ref=e5]: 上游事件发送
+  - heading "从一笔支付开始。" [level=1] [ref=e6]
+  - paragraph [ref=e7]: 发送一条真实的 Kafka 事件，观察 Flink 如何更新商店的累计金额。
+  - navigation "事件处理路径" [ref=e8]:
+    - strong [ref=e9]: 支付事件
+    - generic [aria-hidden] [ref=e10]: →
+    - generic [ref=e11]: Kafka 输入
+    - generic [aria-hidden] [ref=e12]: →
+    - generic [ref=e13]: Flink 聚合
+    - generic [aria-hidden] [ref=e14]: →
+    - generic [ref=e15]: Kafka 输出
+    - generic [aria-hidden] [ref=e16]: →
+    - generic [ref=e17]: PostgreSQL
+  - generic [ref=e18]:
+    - region [ref=e19]:
+      - heading "构造支付事件" [level=2] [ref=e20]
+      - paragraph [ref=e21]: 每笔新支付使用独立的事件 ID。
+      - generic [ref=e22]:
+        - group [ref=e23]:
+          - generic [ref=e24]: 商店 ID
+          - textbox "商店 ID" [ref=e25]: shop-demo
+          - paragraph [ref=e26]: 支持字母、数字、下划线和短横线。同一商店的金额会累加。
+          - generic [ref=e27]: 支付金额 元
+          - textbox "支付金额 元" [ref=e28]: "100.00"
+          - paragraph [ref=e29]: 大于 0，最多两位小数；发送时精确转换为整数分。
+        - generic [ref=e30]:
+          - button "发送支付事件" [ref=e31] [cursor=pointer]
+          - button "重发同一事件" [disabled] [ref=e32]
+          - button "准备下一笔" [disabled] [ref=e33]
+      - paragraph [ref=e34]: 重发会保留原始 ID、金额和时间，用来观察 Flink 的事件去重。修改金额前，请先点“准备下一笔”。
+    - region [ref=e35]:
+      - generic [ref=e36]:
+        - heading "将发送的事件" [level=2] [ref=e37]
+        - generic [ref=e38]: JSON
+      - generic [ref=e39]:
+        - generic [ref=e40]:
+          - term [ref=e41]: Topic
+          - definition [ref=e42]: payment-events
+        - generic [ref=e43]:
+          - term [ref=e44]: Key
+          - definition [ref=e45]: shop-demo
+      - generic "事件 JSON 预览" [ref=e46]: "{ \"eventId\": \"a3129e65-0482-416c-b1e7-5a2fedb7396d\", \"shopId\": \"shop-demo\", \"amountCents\": 10000, \"occurredAt\": \"2026-10-21T13:32:12.491Z\" }"
+      - paragraph [ref=e47]: eventId 标识一笔支付，shopId 用于分组，amountCents 的单位是分。
+  - region [ref=e48]:
+    - generic [ref=e49]:
+      - heading "发送回执" [level=2] [ref=e50]
+      - generic [ref=e51]: 尚未发送
+    - status [ref=e52]: 点击“发送支付事件”，这里会显示 Kafka 确认接收的位置。
+    - paragraph [ref=e53]: 收到 ACCEPTED 仅表示 Kafka 已接收。Flink 计算、checkpoint 提交与数据库更新会在后续发生。
+  - generic [ref=e54]: 由 payment-service 提供 · POST /api/payments
