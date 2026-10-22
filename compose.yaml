@@ -3,6 +3,7 @@ services:
     image: apache/hive:4.2.1
     environment:
       SERVICE_NAME: hiveserver2
+      HIVESERVER2_PID_DIR: /dev/shm
       SERVICE_OPTS: >-
         -Djavax.jdo.option.ConnectionURL=jdbc:derby:;databaseName=/opt/hive/data/warehouse/metastore_db;create=true
         -Dhive.metastore.warehouse.dir=/opt/hive/data/warehouse/tables
